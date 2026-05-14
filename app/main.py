@@ -26,7 +26,6 @@ from app.api.v1.routes import (
 from slowapi.errors import RateLimitExceeded
 from slowapi import _rate_limit_exceeded_handler
 
-
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
@@ -46,10 +45,7 @@ allowed_origins = [
     "http://127.0.0.1:3000",
     "http://localhost:5173",
     "http://127.0.0.1:5173",
-    "https://work-force-360.vercel.app",
-    "https://www.work-force-360.vercel.app",
-    "https://work-force-360.onrender.com",
-    "https://workforce360-admin-panel.vercel.app",
+    "https://workforce360-production.up.railway.app",
 ]
 
 app.add_middleware(
