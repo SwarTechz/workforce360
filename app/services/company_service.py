@@ -433,11 +433,13 @@ s3_client = boto3.client(
     region_name="us-east-1",
 )
 
-objects = s3_client.list_objects_v2(Bucket="workforce360-terms", Prefix="company_docs/")
+objects = s3_client.list_objects_v2(
+    Bucket="workforce360-s3-bucket", Prefix="company_docs/"
+)
 
 print(objects)
 
-BUCKET_NAME = "workforce360-terms"
+BUCKET_NAME = "workforce360-s3-bucket"
 TERMS_KEY = "workforce_terms.html"  # latest pointer
 
 
@@ -486,7 +488,7 @@ def generate_upload_url_service(
         url = s3_client.generate_presigned_url(
             ClientMethod="put_object",
             Params={
-                "Bucket": "workforce360-terms",
+                "Bucket": "workforce360-s3-bucket",
                 "Key": key,
                 "ContentType": CONTENT_TYPES[file_type],
             },
@@ -495,7 +497,7 @@ def generate_upload_url_service(
 
         return {
             "upload_url": url,
-            "file_url": f"https://workforce360-terms.s3.amazonaws.com/{key}",
+            "file_url": f"https://workforce360-s3-bucket.s3.amazonaws.com/{key}",
         }
 
     except HTTPException:
@@ -549,46 +551,6 @@ def generate_upload_url_service(
 # -----------------------End Save Document Service----------------------- #
 
 
-# -----------------------Get Document Service----------------------- #
-# def get_document_service(
-#     document_id: str,
-#     current_user: str,
-#     db: Session,
-# ) -> str:
-#     document = (
-#         db.query(CompanyDocumentModel)
-#         .join(CompanyModel)
-#         .filter(
-#             CompanyDocumentModel.id == document_id,
-#             CompanyModel.firebase_uid == current_user,
-#         )
-#         .first()
-#     )
-
-#     if not document:
-#         raise HTTPException(
-#             status_code=status.HTTP_404_NOT_FOUND,
-#             detail="Document not found",
-#         )
-
-#     # Extract S3 key from URL
-#     s3_key = document.document_url.split(".com/")[1]
-
-#     presigned_url = s3_client.generate_presigned_url(
-#         ClientMethod="get_object",
-#         Params={
-#             "Bucket": "workforce360-terms",
-#             "Key": s3_key,
-#         },
-#         ExpiresIn=300,  # 5 minutes
-#     )
-
-#     return presigned_url
-
-
-# -----------------------End Get Document Service----------------------- #
-
-
 # -----------------------Delete Document Service----------------------- #
 def delete_document_service(
     document_id: str,
@@ -616,7 +578,7 @@ def delete_document_service(
 
     # Delete from S3
     s3_client.delete_object(
-        Bucket="workforce360-terms",
+        Bucket="workforce360-s3-bucket",
         Key=s3_key,
     )
 

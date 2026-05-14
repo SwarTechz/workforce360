@@ -35,7 +35,7 @@ RESTART IDENTITY;
 
 
 --Prerequsite Commands
-
+CREATE DATABASE workforce360_db
 CREATE EXTENSION IF NOT EXISTS postgis; --Enable postgis extension inside your database:
 
 --Worker

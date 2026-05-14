@@ -26,8 +26,7 @@ from app.schemas.worker_schema import (
 )
 from app.utils.logger import logger
 
-
-# Helper function for s3 upload url
+# Helper function for s3 upload url0.3]
 import boto3
 from botocore.exceptions import ClientError
 
@@ -38,13 +37,15 @@ s3_client = boto3.client(
     region_name="us-east-1",
 )
 
-objects = s3_client.list_objects_v2(Bucket="workforce360-terms", Prefix="worker_docs/")
+objects = s3_client.list_objects_v2(
+    Bucket="workforce360-s3-bucket", Prefix="worker_docs/"
+)
 
 print(objects)
 # End helper function for s3 upload url
 
 # -----------------------Get Worker Terms and Conditions Service----------------------- #
-WORKER_TERMS_BUCKET_NAME = "workforce360-terms"
+WORKER_TERMS_BUCKET_NAME = "workforce360-s3-bucket"
 WORKER_TERMS_KEY = "worker_terms.html"
 
 
@@ -1124,7 +1125,7 @@ def generate_upload_url_service(
         url = s3_client.generate_presigned_url(
             ClientMethod="put_object",
             Params={
-                "Bucket": "workforce360-terms",
+                "Bucket": "workforce360-s3-bucket",
                 "Key": key,
                 "ContentType": CONTENT_TYPES[file_type],
             },
@@ -1133,7 +1134,7 @@ def generate_upload_url_service(
 
         return {
             "upload_url": url,
-            "file_url": f"https://workforce360-terms.s3.amazonaws.com/{key}",
+            "file_url": f"https://workforce360-s3-bucket.s3.amazonaws.com/{key}",
         }
 
     except HTTPException:
