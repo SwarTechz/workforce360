@@ -25,6 +25,15 @@ TRUNCATE TABLE
     companies
 RESTART IDENTITY;
 
+select * from documents
+select * from document_chunks
+select * from chat_sessions
+select * from chat_messages
+
+TRUNCATE TABLE
+	chat_sessions,
+	chat_messages
+
 TRUNCATE TABLE
     worker_documents,
 	worker_skill_categories,

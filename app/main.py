@@ -1,3 +1,4 @@
+print("MAIN FILE STARTED")
 from datetime import datetime, timezone
 from typing import List, Optional
 from app.core import limiter
@@ -29,14 +30,7 @@ from slowapi import _rate_limit_exceeded_handler
 app = FastAPI(
     title=settings.PROJECT_NAME,
     version=settings.VERSION,
-    # description=settings.DESCRIPTION,
-    # contact={"name": "Pavi", "email": "pavi@company.com"},
-    # license_info={"name": "MIT"},
-    # openapi_tags=[
-    #     {"name": "Auth", "description": "User authentication using JWT tokens"},
-    #     {"name": "Worker", "description": "Worker management endpoints"},
-    #     {"name": "Job", "description": "Job posting and management endpoints"},
-    # ],
+    lifespan=print("FASTAPI STARTUP COMPLETE"),
 )
 
 # ---------- Middleware ----------
@@ -50,9 +44,9 @@ allowed_origins = [
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=allowed_origins,
-    allow_origin_regex=r"https://.*\.vercel\.app",
-    allow_credentials=True,
+    allow_origins=["*"],
+    # allow_origin_regex=r"https://.*\.vercel\.app",
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
