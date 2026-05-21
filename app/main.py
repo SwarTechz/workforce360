@@ -118,7 +118,3 @@ async def root():
         data={"version": settings.VERSION},
         code=status.HTTP_200_OK,
     )
-
-
-# if __name__ == "__main__":
-#     uvicorn.run(app, host="0.0.0.0", port=8000)
