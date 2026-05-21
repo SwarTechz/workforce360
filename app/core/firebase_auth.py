@@ -1,11 +1,17 @@
-import json
 import os
+import json
+import base64
 import firebase_admin
+
 from firebase_admin import credentials, auth, firestore
-from app.utils.logger import logger
 from fastapi import HTTPException, status, Header
 
+from app.utils.logger import logger
+
 _db = None
+
+
+# ----------------------------------Firebase Initialization----------------------------------
 
 
 def initialize_firebase():
@@ -13,32 +19,51 @@ def initialize_firebase():
     Initializes Firebase Admin SDK exactly once per process.
     Safe to call multiple times.
     """
+
+    # Prevent re-initialization
     if firebase_admin._apps:
         return
 
-    firebase_json = os.getenv("FIREBASE_SERVICE_ACCOUNT_JSON")
+    firebase_b64 = os.getenv("FIREBASE_SERVICE_ACCOUNT_JSON_BASE64")
 
-    if not firebase_json:
-        raise RuntimeError("FIREBASE_SERVICE_ACCOUNT_JSON not set")
+    if not firebase_b64:
+        raise RuntimeError("FIREBASE_SERVICE_ACCOUNT_JSON_BASE64 not set")
 
     try:
+        # Decode Base64 -> JSON string
+        firebase_json = base64.b64decode(firebase_b64).decode("utf-8")
+
+        # Convert JSON string -> Python dict
         service_account_info = json.loads(firebase_json)
+
+        # Initialize Firebase
         cred = credentials.Certificate(service_account_info)
+
         firebase_admin.initialize_app(cred)
 
+        logger.info("Firebase initialized successfully")
+
     except Exception as e:
+        logger.error(f"Firebase initialization failed: {str(e)}")
+
         raise RuntimeError(f"Firebase initialization failed: {str(e)}")
+
+
+# ----------------------------------Verify Firebase Token----------------------------------
 
 
 def verify_firebase_token(token: str) -> dict:
     """
     Verifies Firebase ID token and returns decoded claims.
     """
+
     try:
-        initialize_firebase()  # ✅ CRITICAL FIX
-        # return auth.verify_id_token(token)
+        initialize_firebase()
+
         decoded_token = auth.verify_id_token(token)
-        print("🔥 Firebase  token:", token)
+
+        print("🔥 Firebase token verified")
+
         return decoded_token
 
     except auth.ExpiredIdTokenError:
@@ -54,17 +79,22 @@ def verify_firebase_token(token: str) -> dict:
         )
 
     except Exception as e:
-        print("🔥 Firebase auth error:", str(e))
+        logger.error(f"Firebase auth error: {str(e)}")
+
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Authentication failed",
         )
 
 
+# ----------------------------------Get Current User----------------------------------
+
+
 def get_current_user(authorization: str = Header(...)):
     """
     FastAPI dependency to extract and verify Firebase token.
     """
+
     if not authorization.startswith("Bearer "):
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
@@ -72,47 +102,39 @@ def get_current_user(authorization: str = Header(...)):
         )
 
     token = authorization.split(" ")[1]
+
     return verify_firebase_token(token)
 
 
-# ----------------------------------Firestore Production Initialization for Admin Panel----------------------------------
-# Production function for Vercel.
-# Set env var: FIREBASE_ADMINSDK_JSON with the full Firebase service account JSON.
+# ----------------------------------Firestore Initialization----------------------------------
+
+
 def get_firestore():
+    """
+    Returns Firestore client singleton.
+    """
+
     global _db
 
+    # Reuse existing Firestore client
     if _db is not None:
         return _db
 
-    firebase_adminsdk_json = os.getenv("FIREBASE_SERVICE_ACCOUNT_JSON")
-    if not firebase_adminsdk_json:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Missing FIREBASE_SERVICE_ACCOUNT_JSON environment variable for production.",
-        )
-
     try:
-        firebase_credentials = json.loads(firebase_adminsdk_json)
-    except json.JSONDecodeError as e:
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="FIREBASE_SERVICE_ACCOUNT_JSON is not valid JSON.",
-        ) from e
+        # Ensure Firebase initialized
+        initialize_firebase()
 
-    try:
-        if not firebase_admin._apps:
-            cred = credentials.Certificate(firebase_credentials)
-            firebase_admin.initialize_app(cred)
-            logger.info("Firebase initialized (production env)")
-
+        # Create Firestore client
         _db = firestore.client()
+
+        logger.info("Firestore initialized successfully")
+
         return _db
+
     except Exception as e:
-        logger.error(f"Firebase initialization failed: {e}")
+        logger.error(f"Firestore initialization failed: {str(e)}")
+
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Unable to initialize Firebase Firestore",
         )
-
-
-# ----------------------------------Firestore Production Initialization----------------------------------
