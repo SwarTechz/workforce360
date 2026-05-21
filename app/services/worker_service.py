@@ -27,21 +27,35 @@ from app.schemas.worker_schema import (
 from app.utils.logger import logger
 
 # Helper function for s3 upload url0.3]
+import os
 import boto3
 from botocore.exceptions import ClientError
 
-s3_client = boto3.client(
-    "s3",
-    aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-    aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
-    region_name="us-east-1",
-)
 
-objects = s3_client.list_objects_v2(
-    Bucket="workforce360-s3-bucket", Prefix="worker_docs/"
-)
+def get_s3_client():
+    return boto3.client(
+        "s3",
+        aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+        aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+        region_name="us-east-1",
+    )
 
-print(objects)
+
+def list_worker_docs():
+    try:
+        s3_client = get_s3_client()
+
+        objects = s3_client.list_objects_v2(
+            Bucket="workforce360-s3-bucket", Prefix="worker_docs/"
+        )
+
+        return objects
+
+    except ClientError as e:
+        print("S3 Error:", e)
+        return None
+
+
 # End helper function for s3 upload url
 
 # -----------------------Get Worker Terms and Conditions Service----------------------- #
@@ -51,6 +65,7 @@ WORKER_TERMS_KEY = "worker_terms.html"
 
 def get_worker_terms_and_conditions() -> str:
     try:
+        s3_client = get_s3_client()
         response = s3_client.get_object(
             Bucket=WORKER_TERMS_BUCKET_NAME,
             Key=WORKER_TERMS_KEY,
@@ -1122,6 +1137,7 @@ def generate_upload_url_service(
 
         key = f"worker_docs/{current_user}/{uuid4()}.{file_type}"
 
+        s3_client = get_s3_client()
         url = s3_client.generate_presigned_url(
             ClientMethod="put_object",
             Params={

@@ -439,6 +439,36 @@ objects = s3_client.list_objects_v2(
 
 print(objects)
 
+
+import os
+import boto3
+from botocore.exceptions import ClientError
+
+
+def get_s3_client():
+    return boto3.client(
+        "s3",
+        aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+        aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+        region_name="us-east-1",
+    )
+
+
+def list_company_docs():
+    try:
+        s3_client = get_s3_client()
+
+        objects = s3_client.list_objects_v2(
+            Bucket="workforce360-s3-bucket", Prefix="company_docs/"
+        )
+
+        return objects
+
+    except ClientError as e:
+        print("S3 Error:", e)
+        return None
+
+
 BUCKET_NAME = "workforce360-s3-bucket"
 TERMS_KEY = "workforce_terms.html"  # latest pointer
 
