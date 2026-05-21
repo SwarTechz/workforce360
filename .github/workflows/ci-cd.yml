@@ -7,8 +7,8 @@ on:
 
 env:
   AWS_REGION: ap-south-1
-  LIGHTSAIL_SERVICE_NAME: workforce360container
-  CONTAINER_NAME: app
+  LIGHTSAIL_SERVICE_NAME: workforce360-container
+  CONTAINER_NAME: workforce360container
   IMAGE_NAME: workforce360image
 
 jobs:
