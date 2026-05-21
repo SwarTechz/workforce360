@@ -1,0 +1,85 @@
+name: Deploy FastAPI to AWS Lightsail
+
+on:
+  push:
+    branches:
+      - main
+
+env:
+  AWS_REGION: ap-south-1
+  LIGHTSAIL_SERVICE_NAME: workforce360container
+  CONTAINER_NAME: app
+  IMAGE_NAME: workforce360image
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Checkout source code
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Configure AWS credentials
+      - name: Configure AWS Credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # 3. Install Lightsail CLI plugin
+      - name: Install Lightsail plugin
+        run: |
+          curl "https://s3.us-west-2.amazonaws.com/lightsailctl/latest/linux-amd64/lightsailctl" \
+          -o /usr/local/bin/lightsailctl
+
+          chmod +x /usr/local/bin/lightsailctl
+
+      # 4. Build Docker image
+      - name: Build Docker image
+        run: |
+          docker build -t $IMAGE_NAME .
+
+      # 5. Push image to Lightsail
+      - name: Push image to Lightsail
+        run: |
+          aws lightsail push-container-image \
+            --region $AWS_REGION \
+            --service-name $LIGHTSAIL_SERVICE_NAME \
+            --label $CONTAINER_NAME \
+            --image $IMAGE_NAME
+
+      # 6. Get latest uploaded image
+      - name: Get latest image
+        id: image
+        run: |
+          IMAGE=$(aws lightsail get-container-images \
+            --region $AWS_REGION \
+            --service-name $LIGHTSAIL_SERVICE_NAME \
+            --query "containerImages[0].image" \
+            --output text)
+
+          echo "image=$IMAGE" >> $GITHUB_OUTPUT
+
+      # 7. Deploy latest image
+      - name: Deploy container
+        run: |
+          aws lightsail create-container-service-deployment \
+            --region $AWS_REGION \
+            --service-name $LIGHTSAIL_SERVICE_NAME \
+            --containers "{
+              \"$CONTAINER_NAME\": {
+                \"image\": \"${{ steps.image.outputs.image }}\",
+                \"ports\": {
+                  \"8000\": \"HTTP\"
+                },
+                \"environment\": {
+                  \"FIREBASE_SERVICE_ACCOUNT_JSON_BASE64\": \"${{ secrets.FIREBASE_SERVICE_ACCOUNT_JSON_BASE64 }}\"
+                }
+              }
+            }" \
+            --public-endpoint "{
+              \"containerName\": \"$CONTAINER_NAME\",
+              \"containerPort\": 8000
+            }"
