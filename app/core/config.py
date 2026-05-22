@@ -16,8 +16,9 @@ class Settings(BaseModel):
     # )
     # production database URL
     DATABASE_URL: str = (
-        "postgresql://postgres:workforce360app@workforce360-instance.cruc6cccuae4.ap-south-2.rds.amazonaws.com:5432/workforce360_db"
+        "postgresql://postgres:workforce360app@workforce360-instance.cq18ukwo0lqa.us-east-1.rds.amazonaws.com:5432/workforce360_db"
     )
+    # username - postgres
     # password - workforce360app
 
     # FIREBASE_SERVICE_ACCOUNT_PATH: str = "workforce360_firebase_server_account_key.json"
