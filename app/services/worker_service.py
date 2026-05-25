@@ -30,14 +30,20 @@ from app.utils.logger import logger
 import os
 import boto3
 from botocore.exceptions import ClientError
+from botocore.config import Config
 
 
 def get_s3_client():
     return boto3.client(
         "s3",
+        region_name="ap-south-2",
         aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
         aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
-        region_name="ap-south-2",
+        endpoint_url="https://workforce360-s3-bucket.s3.ap-south-2.amazonaws.com",
+        config=Config(
+            signature_version="s3v4",
+            s3={"addressing_style": "virtual"},
+        ),
     )
 
 
@@ -1138,6 +1144,7 @@ def generate_upload_url_service(
         key = f"worker_docs/{current_user}/{uuid4()}.{file_type}"
 
         s3_client = get_s3_client()
+        print("S3 CLIENT CREATED")
         url = s3_client.generate_presigned_url(
             ClientMethod="put_object",
             Params={
@@ -1147,6 +1154,7 @@ def generate_upload_url_service(
             },
             ExpiresIn=300,  # 5 minutes
         )
+        print("UPLOAD URL 👉", url)
 
         return {
             "upload_url": url,
