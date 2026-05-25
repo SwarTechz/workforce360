@@ -4,7 +4,10 @@ from app.core.firebase_auth import get_current_user
 from app.core.firebase_auth import initialize_firebase
 from app.db.session import get_db
 from app.core.limiter import limiter
-from app.schemas.company_schema import UploadUrlRequest, AdminCompanyProfileDetailsSchema
+from app.schemas.company_schema import (
+    UploadUrlRequest,
+    AdminCompanyProfileDetailsSchema,
+)
 from app.services.admin_panel_company_service import (
     get_all_approved_companies_service,
     get_all_draft_companies_service,
@@ -15,7 +18,7 @@ from app.services.admin_panel_company_service import (
     update_company_status_to_approved_service,
     update_company_status_to_unapproved_service,
 )
-from app.services.worker_service import generate_upload_url_service
+from app.services.company_service import generate_upload_url_service
 from app.utils.response import custom_response
 from uuid import UUID
 from pydantic import BaseModel

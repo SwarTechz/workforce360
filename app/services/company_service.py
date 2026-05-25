@@ -423,21 +423,6 @@ def update_document_info_service(
 # -----------------------End Update Company Profile Service----------------------- #
 
 # -----------------------Get Terms and Conditions Service----------------------- #
-import boto3
-from botocore.exceptions import ClientError
-
-s3_client = boto3.client(
-    "s3",
-    aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-    aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
-    region_name="us-east-1",
-)
-
-objects = s3_client.list_objects_v2(
-    Bucket="workforce360-s3-bucket", Prefix="company_docs/"
-)
-
-print(objects)
 
 
 import os
@@ -450,7 +435,7 @@ def get_s3_client():
         "s3",
         aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
         aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
-        region_name="us-east-1",
+        region_name="ap-south-2",
     )
 
 
@@ -475,6 +460,7 @@ TERMS_KEY = "workforce_terms.html"  # latest pointer
 
 def get_terms_and_conditions() -> str:
     try:
+        s3_client = get_s3_client()
         response = s3_client.get_object(
             Bucket=BUCKET_NAME,
             Key=TERMS_KEY,
@@ -515,6 +501,7 @@ def generate_upload_url_service(
 
         key = f"company_docs/{current_user}/{uuid4()}.{file_type}"
 
+        s3_client = get_s3_client()
         url = s3_client.generate_presigned_url(
             ClientMethod="put_object",
             Params={
@@ -607,6 +594,7 @@ def delete_document_service(
     s3_key = document.document_url.split(".com/")[1]
 
     # Delete from S3
+    s3_client = get_s3_client()
     s3_client.delete_object(
         Bucket="workforce360-s3-bucket",
         Key=s3_key,
