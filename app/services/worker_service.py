@@ -32,19 +32,44 @@ import boto3
 from botocore.exceptions import ClientError
 from botocore.config import Config
 
+# =========================================================
+# S3 CLIENT
+# =========================================================
+
 
 def get_s3_client():
-    return boto3.client(
-        "s3",
-        region_name="ap-south-2",
-        aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
-        aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
-        endpoint_url="https://workforce360-s3-bucket.s3.ap-south-2.amazonaws.com",
-        config=Config(
-            signature_version="s3v4",
-            s3={"addressing_style": "virtual"},
-        ),
-    )
+    try:
+        logger.info("=" * 80)
+        logger.info("CREATING S3 CLIENT")
+        logger.info("AWS REGION: ap-south-2")
+        logger.info(
+            "AWS ACCESS KEY EXISTS: %s",
+            bool(os.getenv("AWS_ACCESS_KEY_ID")),
+        )
+        logger.info(
+            "AWS SECRET KEY EXISTS: %s",
+            bool(os.getenv("AWS_SECRET_ACCESS_KEY")),
+        )
+
+        client = boto3.client(
+            "s3",
+            region_name="ap-south-2",
+            aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
+            aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
+            endpoint_url="https://workforce360-s3-bucket.s3.ap-south-2.amazonaws.com",
+            config=Config(
+                signature_version="s3v4",
+                s3={"addressing_style": "virtual"},
+            ),
+        )
+
+        logger.info("S3 CLIENT CREATED SUCCESSFULLY")
+
+        return client
+
+    except Exception as e:
+        logger.exception("FAILED TO CREATE S3 CLIENT")
+        raise e
 
 
 def list_worker_docs():
@@ -1122,17 +1147,33 @@ def update_worker_bank_details_service(
 
 
 # # -----------------------Generate S3 Upload URL Service----------------------- #
+# =========================================================
+# GENERATE PRESIGNED URL
+# =========================================================
 def generate_upload_url_service(
     file_type: str,
-    current_user,
+    current_user: str,
 ) -> dict:
     try:
+        logger.info("=" * 80)
+        logger.info("STARTING PRESIGNED URL GENERATION")
+
+        logger.info("INPUT FILE TYPE: %s", file_type)
+        logger.info("CURRENT USER: %s", current_user)
+
         allowed_types = ["png", "jpg", "jpeg", "pdf"]
+
+        logger.info("VALIDATING FILE TYPE")
+
         if file_type not in allowed_types:
+            logger.error("UNSUPPORTED FILE TYPE: %s", file_type)
+
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail="Unsupported file type",
             )
+
+        logger.info("FILE TYPE VALIDATED SUCCESSFULLY")
 
         CONTENT_TYPES = {
             "png": "image/png",
@@ -1141,30 +1182,98 @@ def generate_upload_url_service(
             "pdf": "application/pdf",
         }
 
+        content_type = CONTENT_TYPES[file_type]
+
+        logger.info("RESOLVED CONTENT TYPE: %s", content_type)
+
         key = f"worker_docs/{current_user}/{uuid4()}.{file_type}"
 
+        logger.info("GENERATED S3 OBJECT KEY: %s", key)
+
+        # =========================================================
+        # CREATE S3 CLIENT
+        # =========================================================
+
         s3_client = get_s3_client()
-        print("S3 CLIENT CREATED")
+
+        logger.info("S3 CLIENT OBJECT: %s", s3_client)
+
+        # =========================================================
+        # GENERATE PRESIGNED URL
+        # =========================================================
+
+        logger.info("GENERATING PRESIGNED URL")
+
         url = s3_client.generate_presigned_url(
             ClientMethod="put_object",
             Params={
                 "Bucket": "workforce360-s3-bucket",
                 "Key": key,
-                "ContentType": CONTENT_TYPES[file_type],
+                "ContentType": content_type,
             },
-            ExpiresIn=300,  # 5 minutes
+            ExpiresIn=300,
+            HttpMethod="PUT",
         )
-        print("UPLOAD URL 👉", url)
 
-        return {
+        logger.info("PRESIGNED URL GENERATED SUCCESSFULLY")
+
+        # =========================================================
+        # CRITICAL DEBUGGING
+        # =========================================================
+
+        logger.info("FULL PRESIGNED URL:")
+        logger.info(url)
+
+        if "s3.amazonaws.com" in url:
+            logger.error("GLOBAL ENDPOINT DETECTED - THIS WILL CAUSE CORS ISSUES")
+
+        if "s3.ap-south-2.amazonaws.com" in url:
+            logger.info("REGIONAL ENDPOINT DETECTED SUCCESSFULLY")
+
+        if "X-Amz-Credential" in url:
+            logger.info("AWS SIGNATURE FOUND IN URL")
+
+        if "ap-south-2" in url:
+            logger.info("CORRECT REGION DETECTED IN SIGNATURE")
+
+        # =========================================================
+        # FINAL FILE URL
+        # =========================================================
+
+        file_url = (
+            f"https://workforce360-s3-bucket." f"s3.ap-south-2.amazonaws.com/{key}"
+        )
+
+        logger.info("FINAL FILE URL: %s", file_url)
+
+        response = {
             "upload_url": url,
-            "file_url": f"https://workforce360-s3-bucket.s3.ap-south-2.amazonaws.com/{key}",
+            "file_url": file_url,
         }
 
+        logger.info("FINAL RESPONSE:")
+        logger.info(response)
+
+        logger.info("PRESIGNED URL GENERATION COMPLETED")
+        logger.info("=" * 80)
+
+        return response
+
     except HTTPException:
+        logger.exception("HTTP EXCEPTION OCCURRED")
         raise
+
+    except ClientError as e:
+        logger.exception("AWS CLIENT ERROR OCCURRED")
+
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"AWS S3 Client Error: {str(e)}",
+        )
+
     except Exception as e:
-        print("S3 ERROR 👉", e)  # or logger.exception(e)
+        logger.exception("UNKNOWN ERROR OCCURRED")
+
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Error generating upload URL",
