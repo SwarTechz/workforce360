@@ -18,7 +18,7 @@ from app.services.admin_panel_company_service import (
     update_company_status_to_approved_service,
     update_company_status_to_unapproved_service,
 )
-from app.services.company_service import generate_upload_url_service
+from app.services.worker_service import generate_upload_url_service
 from app.utils.response import custom_response
 from uuid import UUID
 from pydantic import BaseModel
