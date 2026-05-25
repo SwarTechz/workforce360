@@ -514,7 +514,7 @@ def generate_upload_url_service(
 
         return {
             "upload_url": url,
-            "file_url": f"https://workforce360-s3-bucket.s3.amazonaws.com/{key}",
+            "file_url": f"https://workforce360-s3-bucket.s3.ap-south-2.amazonaws.com/{key}",
         }
 
     except HTTPException:
