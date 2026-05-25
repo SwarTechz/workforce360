@@ -56,7 +56,7 @@ def get_s3_client():
             region_name="ap-south-2",
             aws_access_key_id=os.getenv("AWS_ACCESS_KEY_ID"),
             aws_secret_access_key=os.getenv("AWS_SECRET_ACCESS_KEY"),
-            endpoint_url="https://workforce360-s3-bucket.s3.ap-south-2.amazonaws.com",
+            endpoint_url="https://s3.ap-south-2.amazonaws.com",
             config=Config(
                 signature_version="s3v4",
                 s3={"addressing_style": "virtual"},
